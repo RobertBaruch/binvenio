@@ -1,0 +1,78 @@
+<!--
+ Copyright 2020 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<resources>
+    <string name="app_name">Binvenio</string>
+    <string name="do_action_button_text">Scan</string>
+    <string name="add_container_button_text">Add container</string>
+    <string name="add_binnable_button_text">Add Item</string>
+    <string name="add_binnable_title_text">Add Item</string>
+    <string name="add_button_text">Add</string>
+    <string name="cancel_button_text">Cancel</string>
+    <string name="name_label_text">Name</string>
+    <string name="count_label_text">Count</string>
+    <string name="qr_label_text">QR:</string>
+    <string name="qr_placeholder_text"><![CDATA[<QR>]]></string>
+    <string name="add_container_title">Add container</string>
+    <string name="remove_from_loc_button_text">Remove this from its location</string>
+    <string name="back_button_text">Back</string>
+    <string name="remove_bin_has_loc_title_text">You scanned a container</string>
+    <string name="bin_scanned_title_text">You scanned a container</string>
+    <string name="name_label_text_colon">Name:</string>
+    <string name="location_label_text">Location:</string>
+    <string name="add_to_loc_button_text">Add this container to a location</string>
+    <string name="binnable_scanned_title_text">You scanned an item</string>
+    <string name="count_label_text_colon">Count:</string>
+    <string name="remove_item_from_loc_button_text">Remove this from its location</string>
+    <string name="location_text_none">None</string>
+    <string name="add_item_to_loc_button_text">Add this to a container</string>
+    <string name="plus_1_text">+1</string>
+    <string name="minus_1_text">-1</string>
+    <string name="plus_10_text">+10</string>
+    <string name="minus_10_text">-10</string>
+    <string name="plus_100_text">+100</string>
+    <string name="minus_100_text">-100</string>
+    <string name="contents_label_text"><u>Contents</u></string>
+    <string name="res_count_format">%dx</string>
+    <string name="res_name_format">%s</string>
+    <string name="find_title">Finder</string>
+    <string name="find_item_button_text">Find item</string>
+    <string name="find_container_button_text">Find container</string>
+    <string name="find_button_text">Find</string>
+    <string name="found_res_count_col_heading"><u>Count</u></string>
+    <string name="found_res_name_col_heading"><u>Name</u></string>
+    <string name="found_res_loc_col_heading"><u>Location</u></string>
+    <string name="binvenio_title_text">Organize your stuff</string>
+    <string name="delete_item_button_text">Delete this item</string>
+    <string name="save_changes_button_text">Save changes</string>
+    <string name="nuke_button_text">Development: Delete everything!</string>
+    <string name="container_title">Container</string>
+    <string name="item_title">Item</string>
+    <string name="add_item_title">Add item</string>
+    <string name="delete_container_text">Delete this container</string>
+    <string name="nuke_database_message">Nuke database?</string>
+    <string name="cancel">Cancel</string>
+    <string name="nuke">Nuke</string>
+    <string name="about">About</string>
+    <string name="scan_isbn_button_text">Scan ISBN</string>
+    <string name="nuke_item">Nuke database</string>
+    <string name="export_item">Export database...</string>
+    <string name="import_item">Import database...</string>
+    <string name="print_and_add_button_text">Print and add</string>
+    <string name="checking_ip_label_text">Checking:</string>
+    <string name="search_printer_item">Search for printer...</string>
+    <string name="print_button_text">Print sticker</string>
+</resources>

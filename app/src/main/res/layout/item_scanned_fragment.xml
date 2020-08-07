@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ Copyright 2020 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <variable
+            name="viewModel"
+            type="org.babbageboole.binvenio.ui.item_scanned.ItemScannedViewModel" />
+
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/item_scanned_fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".ui.item_scanned.ItemScannedFragment">
+
+        <Button
+            android:id="@+id/add_remove_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:onClick="@{() -> viewModel.onAddRemove()}"
+            android:text="@{viewModel.addRemoveButtonStr}"
+            app:layout_constraintEnd_toEndOf="@+id/save_changes_button"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toStartOf="@+id/save_changes_button"
+            app:layout_constraintTop_toBottomOf="@+id/print_button"
+            tools:text="@string/remove_item_from_loc_button_text" />
+
+        <TextView
+            android:id="@+id/name_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="24dp"
+            android:labelFor="@id/name_edit"
+            android:text="@string/name_label_text_colon"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/qr_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginBottom="24dp"
+            android:labelFor="@id/qr_text"
+            android:text="@string/qr_label_text"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/qr_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@{viewModel.qr}"
+            app:layout_constraintBaseline_toBaselineOf="@+id/qr_label"
+            app:layout_constraintStart_toEndOf="@+id/qr_label"
+            tools:text="0912384756GA2" />
+
+        <TextView
+            android:id="@+id/location_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:text="@string/location_label_text"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/count_label" />
+
+        <TextView
+            android:id="@+id/location_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@{viewModel.locStr}"
+            app:layout_constraintBaseline_toBaselineOf="@+id/location_label"
+            app:layout_constraintStart_toEndOf="@+id/location_label"
+            tools:text="Bin #335 (Resistors under 100k)" />
+
+        <TextView
+            android:id="@+id/count_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:text="@string/count_label_text_colon"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/name_label" />
+
+        <TextView
+            android:id="@+id/count_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@{viewModel.count.toString()}"
+            app:layout_constraintBaseline_toBaselineOf="@+id/count_label"
+            app:layout_constraintStart_toEndOf="@+id/count_label"
+            tools:text="37" />
+
+        <Button
+            android:id="@+id/plus_1_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:onClick="@{() -> viewModel.onModifyCount(1)}"
+            android:text="@string/plus_1_text"
+            app:layout_constraintEnd_toStartOf="@+id/plus_10_button"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/location_label" />
+
+        <Button
+            android:id="@+id/minus_1_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:onClick="@{() -> viewModel.onModifyCount(-1)}"
+            android:text="@string/minus_1_text"
+            app:layout_constraintEnd_toStartOf="@+id/minus_10_button"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/plus_1_button" />
+
+        <Button
+            android:id="@+id/plus_10_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:onClick="@{() -> viewModel.onModifyCount(10)}"
+            android:text="@string/plus_10_text"
+            app:layout_constraintEnd_toStartOf="@+id/plus_100_button"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/plus_1_button"
+            app:layout_constraintTop_toTopOf="@+id/plus_1_button" />
+
+        <Button
+            android:id="@+id/minus_10_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:onClick="@{() -> viewModel.onModifyCount(-10)}"
+            android:text="@string/minus_10_text"
+            app:layout_constraintEnd_toStartOf="@+id/minus_100_button"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/minus_1_button"
+            app:layout_constraintTop_toTopOf="@+id/minus_1_button" />
+
+        <Button
+            android:id="@+id/plus_100_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:onClick="@{() -> viewModel.onModifyCount(100)}"
+            android:text="@string/plus_100_text"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/plus_10_button"
+            app:layout_constraintTop_toTopOf="@+id/plus_10_button" />
+
+        <Button
+            android:id="@+id/minus_100_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:onClick="@{() -> viewModel.onModifyCount(-100)}"
+            android:text="@string/minus_100_text"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/minus_10_button"
+            app:layout_constraintTop_toTopOf="@+id/minus_10_button" />
+
+        <Button
+            android:id="@+id/delete_item_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:onClick="@{() -> viewModel.onDelete()}"
+            android:text="@string/delete_item_button_text"
+            app:layout_constraintBottom_toTopOf="@+id/qr_label"
+            app:layout_constraintEnd_toEndOf="@+id/save_changes_button"
+            app:layout_constraintStart_toStartOf="@+id/save_changes_button" />
+
+        <Button
+            android:id="@+id/save_changes_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:onClick="@{() -> viewModel.onSaveChanges()}"
+            android:text="@string/save_changes_button_text"
+            app:layout_constraintEnd_toEndOf="@+id/minus_100_button"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="@+id/plus_1_button"
+            app:layout_constraintTop_toBottomOf="@+id/minus_1_button" />
+
+        <EditText
+            android:id="@+id/name_edit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:ems="10"
+            android:inputType="text"
+            android:text="@={viewModel.name}"
+            app:layout_constraintBaseline_toBaselineOf="@+id/name_label"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/name_label"
+            tools:text="600 ohm 0603 resistor" />
+
+        <Button
+            android:id="@+id/print_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/print_button_text"
+            android:onClick="@{() -> viewModel.onPrintSticker()}"
+            app:layout_constraintEnd_toEndOf="@+id/save_changes_button"
+            app:layout_constraintStart_toStartOf="@+id/save_changes_button"
+            app:layout_constraintTop_toBottomOf="@+id/save_changes_button" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>
