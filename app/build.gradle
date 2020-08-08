@@ -14,8 +14,8 @@ android {
         // Must be >=26 because zxing.
         minSdkVersion 26
         targetSdkVersion 30
-        versionCode 6
-        versionName "0.6"
+        versionCode 7
+        versionName "0.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -56,7 +56,7 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.3.1'
-    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0'
@@ -108,5 +108,5 @@ dependencies {
     androidTestImplementation "androidx.navigation:navigation-testing:$nav_version"
     androidTestImplementation 'com.google.truth:truth:1.0.1'
     // For testing ViewRecyclers:
-    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.3.0-rc01'
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.3.0-rc03'
 }

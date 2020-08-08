@@ -32,7 +32,7 @@ class AddItemViewModel(
     application: Application
 ) : CommonViewModel(application) {
     var name = MutableLiveData<String>("")
-    var countStr = MutableLiveData<String>("0")
+    var countStr = MutableLiveData<String>("1")
     val queue = Volley.newRequestQueue(application.applicationContext)
     private val requestTag = "add-item-isbn-lookup"
 

@@ -32,6 +32,7 @@ class ViewModelFactory(
     @Suppress("unchecked_cast")
     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
         when {
+            modelClass.isAssignableFrom(MainViewModel::class.java) -> return MainViewModel(application) as T
             modelClass.isAssignableFrom(FinderViewModel::class.java) -> return FinderViewModel(qr, application) as T
             modelClass.isAssignableFrom(AddItemViewModel::class.java) -> return AddItemViewModel(qr, application) as T
             modelClass.isAssignableFrom(AddContainerViewModel::class.java) -> return AddContainerViewModel(qr, application) as T

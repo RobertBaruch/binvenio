@@ -22,9 +22,9 @@ import kotlinx.coroutines.*
 import org.babbageboole.binvenio.BinvenioApplication
 import org.babbageboole.binvenio.database.Res
 import org.babbageboole.binvenio.database.ResDatabase
+import org.babbageboole.binvenio.zebra.Printer
 import timber.log.Timber
 import java.net.InetSocketAddress
-import java.net.Socket
 
 abstract class CommonViewModel(
     application: Application
@@ -122,15 +122,22 @@ abstract class CommonViewModel(
     // so x=75 to x=375).
     // With an 10 dot wide font and 2 dot gap, only 16 characters
     // work starting from x=165 (192 dots, to x=357)
-    fun printSticker(qr: String, name: String) : Boolean {
-        Timber.i("printSticker")
+    fun printSticker(qr: String, name: String): Boolean {
         val app = getApplication<BinvenioApplication>()
+
+        val network = app.getNetwork()
+        if (network == null) {
+            _showError.value = "No wireless connectivity"
+            return false
+        }
+
         val addr = app.printerAddr
         if (addr == null) {
             Timber.i("Need to find printer")
             _showPrintSearch.value = true
             return false
         }
+
         _showMsg.value = "Printing sticker..."
 
         val lines = mutableListOf("", "", "", "")
@@ -159,7 +166,7 @@ abstract class CommonViewModel(
         """.trimIndent()
 
         uiScope.launch {
-            if (print(addr, str) == true) {
+            if (print(addr, str)) {
                 _printComplete.value = true
             }
         }
@@ -218,29 +225,19 @@ abstract class CommonViewModel(
         }
     }
 
-    private suspend fun print(addr: InetSocketAddress, data: String) : Boolean? {
+    protected suspend fun canConnect(addr: InetSocketAddress): Boolean {
         return withContext(Dispatchers.IO) {
-            return@withContext connect(addr)?.use { socket ->
-                return@use try {
-                    socket.getOutputStream().write(data.toByteArray())
-                    true
-                } catch (ex: Exception) {
-                    null
-                }
+            Printer(getApplication(), addr).use { printer ->
+                return@withContext printer.canConnect()
             }
         }
     }
 
-    private fun connect(addr: InetSocketAddress): Socket? {
-        return try {
-            val socket = Socket()
-            socket.connect(addr, 200 /* milliseconds */)
-            Timber.i("Connected to $addr")
-            socket.soTimeout = 100
-            socket
-        } catch (ex: Exception) {
-            Timber.i("Failed to connect to $addr")
-            null
+    protected suspend fun print(addr: InetSocketAddress, str: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            Printer(getApplication(), addr).use { printer ->
+                return@withContext printer.print(str)
+            }
         }
     }
 }

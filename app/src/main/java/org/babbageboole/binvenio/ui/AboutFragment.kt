@@ -44,9 +44,10 @@ class AboutFragment : Fragment() {
         val aboutView = AboutPage(context)
             .isRTL(false)
             .setDescription("Binvenio: organize your stuff")
-            .addItem(mailtoItem)
             // .addEmail("robert.c.baruch@gmail.com")
             .addItem(Element("Version ${BuildConfig.VERSION_NAME}", R.drawable.ic_baseline_info_24))
+            .addItem(mailtoItem)
+            .addGitHub("RobertBaruch/binvenio")
             .create()
 
         val layout = view.findViewById<LinearLayout>(R.id.about_contents)

@@ -33,6 +33,7 @@ import org.babbageboole.binvenio.databinding.MainFragmentBinding
 import org.babbageboole.binvenio.ui.CommonFragment
 import org.babbageboole.binvenio.ui.NukeDialogFragment
 import org.babbageboole.binvenio.ui.SearchPrinterDialogFragment
+import org.babbageboole.binvenio.ui.ViewModelFactory
 import timber.log.Timber
 
 const val CREATE_FILE = 3971
@@ -84,7 +85,7 @@ class MainFragment : CommonFragment<MainViewModel, MainFragmentBinding>(),
             inflater, R.layout.main_fragment, container, false
         )
         val application = this.requireActivity().application
-        val viewModelFactory = MainViewModelFactory(application)
+        val viewModelFactory = ViewModelFactory(application, "")
         viewModel = ViewModelProvider(this, viewModelFactory).get(MainViewModel::class.java)
 
         binding.mainViewModel = viewModel
