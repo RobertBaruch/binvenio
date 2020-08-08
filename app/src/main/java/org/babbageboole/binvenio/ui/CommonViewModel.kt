@@ -22,7 +22,7 @@ import kotlinx.coroutines.*
 import org.babbageboole.binvenio.BinvenioApplication
 import org.babbageboole.binvenio.database.Res
 import org.babbageboole.binvenio.database.ResDatabase
-import org.babbageboole.binvenio.zebra.Printer
+import org.babbageboole.binvenio.printer.ZebraPrinter
 import timber.log.Timber
 import java.net.InetSocketAddress
 
@@ -227,7 +227,10 @@ abstract class CommonViewModel(
 
     protected suspend fun canConnect(addr: InetSocketAddress): Boolean {
         return withContext(Dispatchers.IO) {
-            Printer(getApplication(), addr).use { printer ->
+            ZebraPrinter(
+                getApplication(),
+                addr
+            ).use { printer ->
                 return@withContext printer.canConnect()
             }
         }
@@ -235,7 +238,10 @@ abstract class CommonViewModel(
 
     protected suspend fun print(addr: InetSocketAddress, str: String): Boolean {
         return withContext(Dispatchers.IO) {
-            Printer(getApplication(), addr).use { printer ->
+            ZebraPrinter(
+                getApplication(),
+                addr
+            ).use { printer ->
                 return@withContext printer.print(str)
             }
         }

@@ -12,27 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.babbageboole.binvenio.zebra
+package org.babbageboole.binvenio.printer
 
 import android.net.Network
 import org.babbageboole.binvenio.BinvenioApplication
 import timber.log.Timber
-import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 
-class Printer(private val application: BinvenioApplication, private val addr: InetSocketAddress) : Closeable {
+class ZebraPrinter(private val application: BinvenioApplication, private val addr: InetSocketAddress) : Printer {
     private var socket: Socket? = null
     private var inStream: InputStream? = null
     private var outStream: OutputStream? = null
 
-    fun canConnect(): Boolean {
+    override fun canConnect(): Boolean {
         return tryConnect() != null
     }
 
-    fun print(data: String): Boolean {
+    override fun print(data: String): Boolean {
         if (outStream == null) tryConnect() ?: return false
         return try {
             Timber.i("sending data to printer")

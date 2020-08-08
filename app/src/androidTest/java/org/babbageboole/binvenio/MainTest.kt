@@ -19,6 +19,7 @@ import android.app.Application
 import android.app.Instrumentation
 import android.content.Intent
 import android.net.Uri
+import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.*
@@ -120,20 +121,18 @@ class MainTest {
 
     @Test
     fun addItem() {
-        stubIntents("12345AB")
-
         onView(withId(R.id.add_item_button)).perform(click())
-
-        intended(hasAction("com.google.zxing.client.android.SCAN"))
 
         checkTitle(R.string.add_item_title)
 
-        onView(withId(R.id.qr_text)).check(matches(withText("12345AB")))
+        onView(withId(R.id.qr_text)).check(matches(isDisplayed()))
+        val qr = intentsTestRule.activity.findViewById<TextView>(R.id.qr_text).text.toString()
+
         onView(withId(R.id.name_edit)).perform(typeText("Diode")).perform(closeSoftKeyboard())
-        onView(withId(R.id.count_edit)).perform(typeText("102")).perform(closeSoftKeyboard())
+        onView(withId(R.id.count_edit)).perform(clearText()).perform(typeText("102")).perform(closeSoftKeyboard())
         onView(withId(R.id.add_button)).perform(click())
 
-        val item = resDao.getNonContainer("12345AB")
+        val item = resDao.getNonContainer(qr)
         assertThat(item).isNotNull()
         assertThat(item!!.name).isEqualTo("Diode")
         assertThat(item.count).isEqualTo(102)
@@ -141,13 +140,13 @@ class MainTest {
 
     @Test
     fun addItem_cancel() {
-        stubIntents("12345AB")
-
         onView(withId(R.id.add_item_button)).perform(click())
 
         checkTitle(R.string.add_item_title)
 
-        onView(withId(R.id.qr_text)).check(matches(withText("12345AB")))
+        onView(withId(R.id.qr_text)).check(matches(isDisplayed()))
+        val qr = intentsTestRule.activity.findViewById<TextView>(R.id.qr_text).text.toString()
+
         onView(withId(R.id.name_edit)).perform(typeText("Diode")).perform(closeSoftKeyboard())
         onView(withId(R.id.count_edit)).perform(typeText("102")).perform(closeSoftKeyboard())
         onView(withId(R.id.cancel_button)).perform(click())
@@ -155,60 +154,43 @@ class MainTest {
         Espresso.pressBackUnconditionally()
         assertThat(intentsTestRule.activity.isDestroyed).isTrue()
 
-        val item = resDao.getNonContainer("12345AB")
+        val item = resDao.getNonContainer(qr)
         assertThat(item).isNull()
     }
 
     @Test
     fun addItem_back() {
-        stubIntents("12345AB")
-
         onView(withId(R.id.add_item_button)).perform(click())
 
         checkTitle(R.string.add_item_title)
 
-        onView(withId(R.id.qr_text)).check(matches(withText("12345AB")))
+        onView(withId(R.id.qr_text)).check(matches(isDisplayed()))
+        val qr = intentsTestRule.activity.findViewById<TextView>(R.id.qr_text).text.toString()
+
         onView(withId(R.id.name_edit)).perform(typeText("Diode")).perform(closeSoftKeyboard())
         onView(withId(R.id.count_edit)).perform(typeText("102")).perform(closeSoftKeyboard())
         pressBack()
         onView(withId(R.id.binvenio_title)).check(matches(isDisplayed()))
 
-        val item = resDao.getNonContainer("12345AB")
+        val item = resDao.getNonContainer(qr)
         assertThat(item).isNull()
     }
 
     @Test
-    fun addItem_duplicate() {
-        resDao.insertRes(
-            Res(
-                qr = "12345AB",
-                name = "preexisting item",
-                count = 1
-            )
-        )
-        stubIntents("12345AB")
-
-        onView(withId(R.id.add_item_button)).perform(click())
-
-        onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
-            .check(matches(withText(containsString("already registered"))))
-    }
-
-    @Test
     fun addItem_negativeCount() {
-        stubIntents("12345AB")
-
         onView(withId(R.id.add_item_button)).perform(click())
 
         checkTitle(R.string.add_item_title)
 
-        onView(withId(R.id.qr_text)).check(matches(withText("12345AB")))
+        onView(withId(R.id.qr_text)).check(matches(isDisplayed()))
+        val qr = intentsTestRule.activity.findViewById<TextView>(R.id.qr_text).text.toString()
+
         onView(withId(R.id.name_edit)).perform(typeText("Diode")).perform(closeSoftKeyboard())
         onView(withId(R.id.count_edit)).perform(clearText()).perform(typeText("-1"))
             .perform(closeSoftKeyboard())
         onView(withId(R.id.add_button)).perform(click())
 
-        val item = resDao.getNonContainer("12345AB")
+        val item = resDao.getNonContainer(qr)
         assertThat(item).isNotNull()
         assertThat(item!!.name).isEqualTo("Diode")
         // Since we can't hit the minus sign in the keyboard, this just was 1.
@@ -217,33 +199,29 @@ class MainTest {
 
     @Test
     fun addContainer() {
-        stubIntents("12345AC")
-
         onView(withId(R.id.add_container_button)).perform(click())
-
-        intended(hasAction("com.google.zxing.client.android.SCAN"))
 
         checkTitle(R.string.add_container_title)
 
-        onView(withId(R.id.qr_text)).check(matches(withText("12345AC")))
+        onView(withId(R.id.qr_text)).check(matches(isDisplayed()))
+        val qr = intentsTestRule.activity.findViewById<TextView>(R.id.qr_text).text.toString()
+
         onView(withId(R.id.name_edit)).perform(typeText("BIN #12345AC"))
             .perform(closeSoftKeyboard())
         onView(withId(R.id.add_button)).perform(click())
 
-        val bin = resDao.getContainer("12345AC")
+        val bin = resDao.getContainer(qr)
         assertThat(bin).isNotNull()
         assertThat(bin!!.name).isEqualTo("BIN #12345AC")
     }
 
     @Test
     fun addContainer_cancel() {
-        stubIntents("12345AC")
-
         onView(withId(R.id.add_container_button)).perform(click())
 
-        checkTitle(R.string.add_container_title)
+        onView(withId(R.id.qr_text)).check(matches(isDisplayed()))
+        val qr = intentsTestRule.activity.findViewById<TextView>(R.id.qr_text).text.toString()
 
-        onView(withId(R.id.qr_text)).check(matches(withText("12345AC")))
         onView(withId(R.id.name_edit)).perform(typeText("BIN #12345AC"))
             .perform(closeSoftKeyboard())
         onView(withId(R.id.cancel_button)).perform(click())
@@ -251,19 +229,8 @@ class MainTest {
         Espresso.pressBackUnconditionally()
         assertThat(intentsTestRule.activity.isDestroyed).isTrue()
 
-        val bin = resDao.getContainer("12345AC")
+        val bin = resDao.getContainer(qr)
         assertThat(bin).isNull()
-    }
-
-    @Test
-    fun addContainer_duplicate() {
-        resDao.insertRes(Res(qr = "12345AC", name = "preexisting container", isContainer = true))
-        stubIntents("12345AC")
-
-        onView(withId(R.id.add_container_button)).perform(click())
-
-        onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
-            .check(matches(withText(containsString("already registered"))))
     }
 
     @Test
