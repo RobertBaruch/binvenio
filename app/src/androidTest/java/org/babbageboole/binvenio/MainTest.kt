@@ -17,13 +17,17 @@ package org.babbageboole.binvenio
 import android.app.Activity
 import android.app.Application
 import android.app.Instrumentation
+import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import android.view.View
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.*
 import androidx.test.espresso.Espresso.pressBack
+import androidx.test.espresso.PerformException
+import androidx.test.espresso.UiController
+import androidx.test.espresso.ViewAction
 import androidx.test.espresso.action.ViewActions.*
 import androidx.test.espresso.action.ViewActions.closeSoftKeyboard
 import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
@@ -31,69 +35,145 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.contrib.RecyclerViewActions
 import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.Intents.intending
-import androidx.test.espresso.intent.matcher.IntentMatchers.*
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.intent.rule.IntentsTestRule
+import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.AndroidJUnitRunner
+import com.google.common.truth.Truth.assertThat
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ApplicationComponent
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.android.testing.CustomTestApplication
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.UninstallModules
+import org.babbageboole.binvenio.database.Res
 import org.babbageboole.binvenio.database.ResDatabase
 import org.babbageboole.binvenio.database.ResDatabaseDao
-import org.junit.Test
-import org.junit.runner.RunWith
+import org.babbageboole.binvenio.printer.PrinterFactory
+import org.babbageboole.binvenio.ui.bin_scanned.ContentsAdapter
+import org.hamcrest.Matcher
+import org.hamcrest.Matchers.containsString
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import timber.log.Timber
 import java.io.IOException
-import com.google.common.truth.Truth.assertThat
-import org.babbageboole.binvenio.database.Res
-import org.babbageboole.binvenio.ui.bin_scanned.ContentsAdapter
-import org.hamcrest.Matchers.*
-import java.io.File
+import java.util.concurrent.TimeoutException
+import javax.inject.Inject
+import javax.inject.Singleton
+
+// A custom runner to set up the instrumented application class for tests. It is referenced
+// in the module build.gradle file under testInstrumentationRunner. A custom [AndroidJUnitRunner]
+// used to replace the application used in tests. Note that Hilt
+// generates a [CustomTestRunner_Application] based on the the [MainTestApplication] defined in
+// the [CustomBaseTestApplication] annotation.
+@CustomTestApplication(MainTestApplication::class)
+class CustomTestRunner : AndroidJUnitRunner() {
+    override fun newApplication(cl: ClassLoader?, name: String?, context: Context?): Application {
+        return super.newApplication(cl, CustomTestRunner_Application::class.java.name, context)
+    }
+}
+
+// Used as a base application for Hilt to run instrumented tests through the [CustomTestRunner].
+// Must be an open class.
+open class MainTestApplication : Application() {
+    override fun onCreate() {
+        Timber.plant(Timber.DebugTree())
+        super.onCreate()
+    }
+}
 
 /**
  * Instrumented test, which will execute on an Android device.
  *
  * See [testing documentation](http://d.android.com/tools/testing).
  */
+@HiltAndroidTest
+@UninstallModules(BinvenioModule::class)
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class MainTest {
-//    @get:Rule
-//    var activityRule = ActivityTestRule(MainActivity::class.java)
+    // This rule must come first in the ordering because Hilt.
+    @get:Rule(order = 0)
+    var hiltRule = HiltAndroidRule(this)
 
     // Apparently IntentsTestRule subclasses ActivityTestRule, so you don't have to
     // declare that.
-    @get:Rule
+    @get:Rule(order = 1)
     var intentsTestRule = IntentsTestRule(MainActivity::class.java, false, false)
+
+    // Test replacements for production stuff.
+    @Module
+    @InstallIn(ApplicationComponent::class)
+    class TestModule {
+        @Provides
+        fun providePrinterFactory(networkGetter: NetworkGetter): PrinterFactory {
+            Timber.i("Got a TestPrinterFactory")
+            return TestPrinterFactory(networkGetter)
+        }
+
+        // At one point I thought I'd need to provide a connectivity monitor that didn't actually
+        // monitor anything, but decided against it.
+        @Provides
+        @Singleton
+        fun provideConnectivityMonitor(@ApplicationContext appContext: Context): ConnectivityMonitor {
+            return RealConnectivityMonitor(appContext)
+        }
+
+        @Provides
+        @Singleton
+        fun provideNetworkGetter(connectivityMonitor: ConnectivityMonitor): NetworkGetter {
+            return RealNetworkGetter(connectivityMonitor)
+        }
+
+        @Provides
+        @Singleton
+        fun providePrinterAddressHolder(): PrinterAddressHolder {
+            return RealPrinterAddressHolder()
+        }
+    }
+
+    @Inject
+    lateinit var printerAddressHolder: PrinterAddressHolder
 
     private lateinit var db: ResDatabase
     private lateinit var resDao: ResDatabaseDao
 
     @Before
     fun setUp() {
-        val context = ApplicationProvider.getApplicationContext<BinvenioApplication>()
+        val context = ApplicationProvider.getApplicationContext<Application>()
 
         val intent = Intent(context, MainActivity::class.java)
         ResDatabase.setIsTest(true)
 
+        context.deleteDatabase(ResDatabase.getName())
         db = ResDatabase.getInstance(context)
         resDao = db.resDatabaseDao
         db.clearAllTables()
 
         intentsTestRule.launchActivity(intent)
+
+        // For injection in MainTest.
+        hiltRule.inject()
     }
 
     @After
     @Throws(IOException::class)
     fun tearDown() {
-        val context = ApplicationProvider.getApplicationContext<BinvenioApplication>()
-
-        db.clearAllTables()
-        ResDatabase.closeInstance()
-        context.deleteDatabase(ResDatabase.getName())
-
         intentsTestRule.finishActivity()
+
+//        db.clearAllTables()
+//        ResDatabase.closeInstance()
+//        context.deleteDatabase(ResDatabase.getName())
     }
 
     // Stub an intent to return the given qr string.
@@ -101,7 +181,10 @@ class MainTest {
         intending(hasAction("com.google.zxing.client.android.SCAN")).respondWithFunction {
             val resultData = Intent()
             resultData.putExtra(com.google.zxing.client.android.Intents.Scan.RESULT, qr)
-            resultData.putExtra(com.google.zxing.client.android.Intents.Scan.RESULT_FORMAT, "QR_CODE")
+            resultData.putExtra(
+                com.google.zxing.client.android.Intents.Scan.RESULT_FORMAT,
+                "QR_CODE"
+            )
             Instrumentation.ActivityResult(Activity.RESULT_OK, resultData)
         }
     }
@@ -129,7 +212,8 @@ class MainTest {
         val qr = intentsTestRule.activity.findViewById<TextView>(R.id.qr_text).text.toString()
 
         onView(withId(R.id.name_edit)).perform(typeText("Diode")).perform(closeSoftKeyboard())
-        onView(withId(R.id.count_edit)).perform(clearText()).perform(typeText("102")).perform(closeSoftKeyboard())
+        onView(withId(R.id.count_edit)).perform(clearText()).perform(typeText("102"))
+            .perform(closeSoftKeyboard())
         onView(withId(R.id.add_button)).perform(click())
 
         val item = resDao.getNonContainer(qr)
@@ -1005,5 +1089,55 @@ class MainTest {
         assertThat(resDao.getRes("containerQR")).isNull()
     }
 
+    @Test
+    fun scanForPrinter() {
+        openActionBarOverflowOrOptionsMenu(ApplicationProvider.getApplicationContext())
+        // The View representing the menu item doesn't have the ID of the item :(
+        onView(withText(R.string.search_printer_item)).perform(click())
+        onView(withText("Searching for printer")).inRoot(isDialog()).check(matches(isDisplayed()))
+        onView(withText(R.string.checking_ip_label_text)).inRoot(isDialog())
+            .check(matches(isDisplayed()))
+
+        onView(isRoot()).perform(object : ViewAction {
+            override fun getDescription(): String =
+                "waiting for the printer address to become non-null"
+
+            override fun getConstraints(): Matcher<View> = isRoot()
+
+            override fun perform(uiController: UiController?, view: View?) {
+                uiController!!.loopMainThreadUntilIdle()
+                val startTime = System.currentTimeMillis()
+                val endTime = startTime + 2000
+
+                while (System.currentTimeMillis() < endTime) {
+                    val addr = printerAddressHolder.getPrinterAddr()?.address?.address
+                    if (addr != null && addr[3] == 100.toByte()) {
+                        return
+                    }
+                    uiController.loopMainThreadForAtLeast(100)
+                }
+                throw PerformException.Builder()
+                    .withCause(TimeoutException())
+                    .withActionDescription(this.description)
+                    .build()
+            }
+        })
+        onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
+            .check(matches(withText(containsString("Printer found"))))
+    }
+
+    @Test
+    fun cancel_scanForPrinter() {
+        openActionBarOverflowOrOptionsMenu(ApplicationProvider.getApplicationContext())
+        // The View representing the menu item doesn't have the ID of the item :(
+        onView(withText(R.string.search_printer_item)).perform(click())
+        onView(withText("Searching for printer")).inRoot(isDialog()).check(matches(isDisplayed()))
+        onView(withText(R.string.cancel)).inRoot(isDialog()).perform(click())
+
+        assertThat(printerAddressHolder.getPrinterAddr()).isNull()
+        onView(withId(R.id.checking_ip_label)).check(doesNotExist())
+        onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
+            .check(matches(withText(containsString("Printer not found"))))
+    }
 }
 

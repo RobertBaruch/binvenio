@@ -14,25 +14,38 @@
 
 package org.babbageboole.binvenio.printer
 
-import android.net.Network
-import org.babbageboole.binvenio.BinvenioApplication
+import org.babbageboole.binvenio.NetworkGetter
 import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
+import javax.inject.Inject
 
-class ZebraPrinter(private val application: BinvenioApplication, private val addr: InetSocketAddress) : Printer {
+class ZebraPrinterFactory @Inject constructor(var networkGetter: NetworkGetter) : PrinterFactory {
+    override fun get(): Printer {
+        return ZebraPrinter(networkGetter)
+    }
+}
+
+class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     private var socket: Socket? = null
     private var inStream: InputStream? = null
     private var outStream: OutputStream? = null
+    private lateinit var addr: InetSocketAddress
+
+    override fun open(addr: InetSocketAddress): Printer? {
+        this.addr = addr
+        if (tryConnect() != null) return this
+        return null
+    }
 
     override fun canConnect(): Boolean {
         return tryConnect() != null
     }
 
     override fun print(data: String): Boolean {
-        if (outStream == null) tryConnect() ?: return false
+        if (outStream == null) return false
         return try {
             Timber.i("sending data to printer")
             outStream!!.write(data.toByteArray())
@@ -49,8 +62,7 @@ class ZebraPrinter(private val application: BinvenioApplication, private val add
     }
 
     private fun connect(timeoutMillis: Int): Socket? {
-        close()
-        val network = getWifiNetwork() ?: return null
+        val network = networkGetter.getNetwork() ?: return null
         return try {
             var s: Socket? = network.socketFactory.createSocket() ?: return null
             s!!.connect(addr, timeoutMillis)
@@ -92,10 +104,6 @@ class ZebraPrinter(private val application: BinvenioApplication, private val add
             Timber.i("Failed to read: $ex")
             null
         }
-    }
-
-    private fun getWifiNetwork(): Network? {
-        return application.getNetwork()
     }
 
     override fun close() {

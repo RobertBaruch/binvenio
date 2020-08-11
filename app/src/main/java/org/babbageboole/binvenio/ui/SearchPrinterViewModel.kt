@@ -18,8 +18,9 @@ import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import org.babbageboole.binvenio.BinvenioApplication
+import timber.log.Timber
 import java.net.InetAddress
 import java.net.InetSocketAddress
 
@@ -41,27 +42,41 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
 
 
     fun onSearch() {
-        if (getApplication<BinvenioApplication>().getNetwork() == null) {
+        setPrinterAddr(null)
+        Timber.i("Checking if we have a network")
+        if (getNetwork() == null) {
             _success.value = false
             return
         }
-
+        val bs = ByteArray(4)
+        bs[0] = 192.toByte()
+        bs[1] = 168.toByte()
+        bs[2] = 1
         uiScope.launch {
-            val bs = ByteArray(4)
-            bs[0] = 192.toByte()
-            bs[1] = 168.toByte()
-            bs[2] = 1
-            for (b in 1.rangeTo(255)) {
-                bs[3] = b.toByte()
-                val addr = InetSocketAddress(InetAddress.getByAddress(bs), 6101)
-                _addr.value = addr
-                if (canConnect(addr)) {
-                    _success.value = true
-                    return@launch
+            try {
+                for (b in 1.rangeTo(255)) {
+                    bs[3] = b.toByte()
+                    val addr = InetSocketAddress(InetAddress.getByAddress(bs), 6101)
+                    _addr.value = addr
+                    Timber.i("Checking $addr")
+
+                    canConnect(addr)?.use {
+                        setPrinterAddr(addr)
+                        _success.value = true
+                        return@launch
+                    }
+                    _progress.value = (100 * b) / 255
                 }
-                _progress.value = (100 * b) / 255
+                _success.value = false
+            } catch (ex: Exception) {
+                // During testing you can get a CancelledException, or an IllegalStateException
+                // because "The component was not created. Check that you have added the HiltAndroidRule" --
+                // probably when a test shuts down, from EntryPointAccessors.fromApplication.
+                Timber.i("Caught exception: $ex")
+                Timber.e(ex)
             }
-            _success.value = false
         }
+        Timber.i("Returning from onSearch")
     }
+
 }

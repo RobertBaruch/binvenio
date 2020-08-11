@@ -21,7 +21,6 @@ import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.babbageboole.binvenio.BinvenioApplication
 import org.babbageboole.binvenio.database.ResDatabase
 import org.babbageboole.binvenio.ui.CommonViewModel
 import timber.log.Timber
@@ -189,7 +188,7 @@ class MainViewModel(
 
     private suspend fun nuke() {
         return withContext(Dispatchers.IO) {
-            val context = getApplication<BinvenioApplication>().applicationContext
+            val context = getApplication<Application>().applicationContext
 
             ResDatabase.getInstance(context).clearAllTables()
         }
@@ -200,7 +199,7 @@ class MainViewModel(
             ResDatabase.closeInstance()
             Timber.i("Closed database for export")
 
-            val context = getApplication<BinvenioApplication>().applicationContext
+            val context = getApplication<Application>().applicationContext
             val file = ResDatabase.getPath(context)
             val contentResolver = context.contentResolver
 
@@ -219,7 +218,7 @@ class MainViewModel(
 
     private suspend fun importDb(uri: Uri) {
         withContext(Dispatchers.IO) {
-            val context = getApplication<BinvenioApplication>().applicationContext
+            val context = getApplication<Application>().applicationContext
             Timber.i("importDB: file")
             val file = File(context.cacheDir, "tmp.db")
             file.deleteOnExit()

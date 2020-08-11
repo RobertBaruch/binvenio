@@ -15,22 +15,63 @@
 package org.babbageboole.binvenio
 
 import android.app.Application
+import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import java.net.InetSocketAddress
 
-class BinvenioApplication : Application() {
-    var printerAddr: InetSocketAddress? = null
-    private var network: Network? = null
+interface PrinterAddressHolder {
+    fun getPrinterAddr(): InetSocketAddress?
+    fun setPrinterAddr(addr: InetSocketAddress?)
+}
+
+class RealPrinterAddressHolder : PrinterAddressHolder {
+    private var addr: InetSocketAddress? = null
+
+    override fun getPrinterAddr(): InetSocketAddress? {
+        return addr
+    }
+
+    override fun setPrinterAddr(addr: InetSocketAddress?) {
+        this.addr = addr
+    }
+}
+
+interface NetworkGetter {
+    fun getNetwork(): Network?
+}
+
+class RealNetworkGetter(private val connectivityMonitor: ConnectivityMonitor) : NetworkGetter {
+    override fun getNetwork(): Network? {
+        Timber.i("Getting network from connectivity monitor")
+        return connectivityMonitor.getNetwork()
+    }
+}
+
+interface ConnectivityMonitor {
+    fun startMonitoring()
+    fun stopMonitoring()
+    fun getNetwork(): Network?
+}
+
+class RealConnectivityMonitor(private val applicationContext: Context) : ConnectivityMonitor {
+    private var _network = MutableLiveData<Network?>()
+    val network: LiveData<Network?>
+        get() = _network
+
     private var networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(n: Network) {
             super.onAvailable(n)
             synchronized(this) {
-                network = n
+                // Cannot use _network.value because this is not in the main thread.
+                _network.postValue(n)
                 Timber.i("Network is up")
             }
         }
@@ -38,26 +79,14 @@ class BinvenioApplication : Application() {
         override fun onLost(n: Network) {
             super.onLost(n)
             synchronized(this) {
-                network = null
+                _network.postValue(null)
                 Timber.i("Network is down")
             }
         }
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        Timber.plant(Timber.DebugTree())
-        watchForWifiNetwork()
-    }
-
-    override fun onTerminate() {
-        val connMgr =
-            ContextCompat.getSystemService(applicationContext, ConnectivityManager::class.java)
-        connMgr?.unregisterNetworkCallback(networkCallback)
-        super.onTerminate()
-    }
-
-    private fun watchForWifiNetwork() {
+    override fun startMonitoring() {
+        Timber.i("ConnectivityMonitor: starting monitoring")
         val connMgr =
             ContextCompat.getSystemService(applicationContext, ConnectivityManager::class.java)
         val netRequest = NetworkRequest.Builder()
@@ -66,9 +95,27 @@ class BinvenioApplication : Application() {
         connMgr?.registerNetworkCallback(netRequest, networkCallback)
     }
 
-    fun getNetwork(): Network? {
-        synchronized(networkCallback) {
-            return network
+    override fun stopMonitoring() {
+        Timber.i("ConnectivityMonitor: stopping monitoring")
+        val connMgr =
+            ContextCompat.getSystemService(applicationContext, ConnectivityManager::class.java)
+        connMgr?.unregisterNetworkCallback(networkCallback)
+        synchronized(this) {
+            _network.postValue(null)
         }
+    }
+
+    override fun getNetwork(): Network? {
+        synchronized(this) {
+            return _network.value
+        }
+    }
+}
+
+@HiltAndroidApp
+class BinvenioApplication : Application() {
+    override fun onCreate() {
+        Timber.plant(Timber.DebugTree())
+        super.onCreate()
     }
 }

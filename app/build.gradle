@@ -3,6 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'androidx.navigation.safeargs'
+apply plugin: 'dagger.hilt.android.plugin'
 
 android {
     compileSdkVersion 30
@@ -14,10 +15,11 @@ android {
         // Must be >=26 because zxing.
         minSdkVersion 26
         targetSdkVersion 30
-        versionCode 7
-        versionName "0.7"
+        versionCode 8
+        versionName "0.61"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "org.babbageboole.binvenio.CustomTestRunner"
+        // testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // Necessary to get rid of the "you requested incremental annotation processing
         // but Room doesn't have incremental annotation processing set" warning.
@@ -61,6 +63,10 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0'
 
+    // Hilt for dependency injection
+    implementation "com.google.dagger:hilt-android:2.28-alpha"
+    kapt "com.google.dagger:hilt-android-compiler:2.28-alpha"
+
     // For updated functionality (registering for intents)
     implementation 'androidx.fragment:fragment:1.3.0-alpha07'
     implementation 'androidx.activity:activity:1.2.0-alpha07'
@@ -97,16 +103,30 @@ dependencies {
     // About page
     implementation 'com.github.medyo:android-about-page:1.3'
 
+    // Non-instrumented unit tests
     testImplementation 'junit:junit:4.13'
     testImplementation "androidx.room:room-testing:$room_version"
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+
+    // Instrumented tests
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    // For mocking out intent calls:
-    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.2.0'
+    androidTestImplementation 'androidx.test:core:1.2.0'
     androidTestImplementation 'androidx.test:rules:1.2.0'
     androidTestImplementation 'androidx.test:runner:1.2.0'
+    androidTestImplementation 'junit:junit:4.13'
+
+    // For mocking out intent calls:
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.2.0'
+
+    // assertions
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+
     androidTestImplementation "androidx.navigation:navigation-testing:$nav_version"
     androidTestImplementation 'com.google.truth:truth:1.0.1'
     // For testing ViewRecyclers:
     androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.3.0-rc03'
+
+    // For instrumented tests with injection
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.28-alpha'
+    // ...with Kotlin.
+    kaptAndroidTest 'com.google.dagger:hilt-android-compiler:2.28-alpha'
 }

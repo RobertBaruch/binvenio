@@ -23,13 +23,16 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import org.babbageboole.binvenio.BinvenioApplication
 import org.babbageboole.binvenio.R
 import org.babbageboole.binvenio.databinding.MainFragmentBinding
 import org.babbageboole.binvenio.databinding.PrintDialogFragmentBinding
+import org.babbageboole.binvenio.printer.PrinterFactory
 import org.babbageboole.binvenio.ui.add_item.AddItemViewModel
 import timber.log.Timber
 import java.net.InetSocketAddress
+import javax.inject.Inject
 
 class SearchPrinterDialogFragment : DialogFragment() {
     // Use this instance of the interface to deliver action events
@@ -81,14 +84,14 @@ class SearchPrinterDialogFragment : DialogFragment() {
 
             viewModel.success.observe(this, Observer {
                 it?.let {
-                    val app : BinvenioApplication = requireActivity().application as BinvenioApplication
+                    // val app : BinvenioApplication = requireActivity().application as BinvenioApplication
 
                     if (it) {
-                        app.printerAddr = viewModel.addr.value
+                        // app.printerAddr = viewModel.addr.value
                         listener.onPrinterFound(this)
                     }
                     else {
-                        app.printerAddr = null
+                        // app.printerAddr = null
                         listener.onCancelSearchPrinter(this)
                     }
                     dialog?.dismiss()

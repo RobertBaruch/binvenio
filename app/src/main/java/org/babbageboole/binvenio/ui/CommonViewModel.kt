@@ -15,14 +15,22 @@
 package org.babbageboole.binvenio.ui
 
 import android.app.Application
+import android.content.Context
+import android.net.Network
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.components.ApplicationComponent
 import kotlinx.coroutines.*
-import org.babbageboole.binvenio.BinvenioApplication
+import org.babbageboole.binvenio.NetworkGetter
+import org.babbageboole.binvenio.PrinterAddressHolder
 import org.babbageboole.binvenio.database.Res
 import org.babbageboole.binvenio.database.ResDatabase
-import org.babbageboole.binvenio.printer.ZebraPrinter
+import org.babbageboole.binvenio.printer.Printer
+import org.babbageboole.binvenio.printer.PrinterFactory
 import timber.log.Timber
 import java.net.InetSocketAddress
 
@@ -73,6 +81,37 @@ abstract class CommonViewModel(
      */
     protected val uiScope = CoroutineScope(Dispatchers.Main + viewModelJob)
 
+    // This is how you inject things into classes that are not directly supported for injection
+    // by Hilt. This works with the Module installed from BinvenioModule to return a concrete
+    // implementation of PrinterFactory.
+    @EntryPoint
+    @InstallIn(ApplicationComponent::class)
+    interface PrinterFactoryEntryPoint {
+        fun printerFactory(): PrinterFactory
+        fun networkGetter(): NetworkGetter
+        fun printerAddressHolder(): PrinterAddressHolder
+    }
+
+    protected fun getPrinterFactory(appContext: Context): PrinterFactory {
+        Timber.i("Getting a printer factory via entry point")
+        // Use fromApplication because the InstallIn above was to the application component.
+        val entryPoint =
+            EntryPointAccessors.fromApplication(appContext, PrinterFactoryEntryPoint::class.java)
+        return entryPoint.printerFactory()
+    }
+
+    protected fun getNetworkGetter(appContext: Context): NetworkGetter {
+        val entryPoint =
+            EntryPointAccessors.fromApplication(appContext, PrinterFactoryEntryPoint::class.java)
+        return entryPoint.networkGetter()
+    }
+
+    protected fun getPrinterAddressHolder(appContext: Context): PrinterAddressHolder {
+        val entryPoint =
+            EntryPointAccessors.fromApplication(appContext, PrinterFactoryEntryPoint::class.java)
+        return entryPoint.printerAddressHolder()
+    }
+
     /**
      * Called when the ViewModel is dismantled.
      * At this point, we want to cancel all coroutines;
@@ -81,7 +120,9 @@ abstract class CommonViewModel(
      */
     override fun onCleared() {
         super.onCleared()
+        Timber.i("onCleared called")
         viewModelJob.cancel()
+        Timber.i("viewModelJob cancelled")
     }
 
     open fun onNavigationComplete() {
@@ -115,6 +156,18 @@ abstract class CommonViewModel(
         _showPrintSearch.value = false
     }
 
+    protected fun getNetwork(): Network? {
+        return getNetworkGetter(getApplication<Application>().applicationContext).getNetwork()
+    }
+
+    protected fun getPrinterAddr(): InetSocketAddress? {
+        return getPrinterAddressHolder(getApplication<Application>().applicationContext).getPrinterAddr()
+    }
+
+    protected fun setPrinterAddr(addr: InetSocketAddress?) {
+        getPrinterAddressHolder(getApplication<Application>().applicationContext).setPrinterAddr(addr)
+    }
+
     // The x coordinate depends on the paper width.
     // This is good only for a 200dpi printer,
     // 2.25" wide (i.e. 450 dots across),
@@ -123,15 +176,13 @@ abstract class CommonViewModel(
     // With an 10 dot wide font and 2 dot gap, only 16 characters
     // work starting from x=165 (192 dots, to x=357)
     fun printSticker(qr: String, name: String): Boolean {
-        val app = getApplication<BinvenioApplication>()
-
-        val network = app.getNetwork()
+        val network = getNetwork()
         if (network == null) {
             _showError.value = "No wireless connectivity"
             return false
         }
 
-        val addr = app.printerAddr
+        val addr = getPrinterAddr()
         if (addr == null) {
             Timber.i("Need to find printer")
             _showPrintSearch.value = true
@@ -225,25 +276,21 @@ abstract class CommonViewModel(
         }
     }
 
-    protected suspend fun canConnect(addr: InetSocketAddress): Boolean {
+    protected suspend fun canConnect(addr: InetSocketAddress): Printer? {
         return withContext(Dispatchers.IO) {
-            ZebraPrinter(
-                getApplication(),
-                addr
-            ).use { printer ->
-                return@withContext printer.canConnect()
-            }
+            Timber.i("canConnect to $addr?")
+            val printerFactory = getPrinterFactory(getApplication<Application>().applicationContext)
+            return@withContext printerFactory.get().open(addr)
         }
     }
 
-    protected suspend fun print(addr: InetSocketAddress, str: String): Boolean {
+    private suspend fun print(addr: InetSocketAddress, str: String): Boolean {
         return withContext(Dispatchers.IO) {
-            ZebraPrinter(
-                getApplication(),
-                addr
-            ).use { printer ->
+            val printerFactory = getPrinterFactory(getApplication<Application>().applicationContext)
+            printerFactory.get().open(addr)?.use { printer ->
                 return@withContext printer.print(str)
             }
+            false
         }
     }
 }
