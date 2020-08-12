@@ -37,15 +37,14 @@ class TestPrinterFactory @Inject constructor(var networkGetter: NetworkGetter) :
 }
 
 class TestPrinter(private val networkGetter: NetworkGetter) : Printer {
-    private var printSuccess: Boolean = true
+    companion object {
+        var printSuccess: Boolean = true
+        var hasDHCP: Boolean = false
+    }
 
     override fun open(addr: InetSocketAddress): Printer? {
         Thread.sleep(10)
         if (addr.address.address[3] == 100.toByte()) return this
-        if (addr.address.address[3] == 101.toByte()) {
-            printSuccess = false
-            return this
-        }
         return null
     }
 
@@ -55,6 +54,10 @@ class TestPrinter(private val networkGetter: NetworkGetter) : Printer {
 
     override fun print(data: String): Boolean {
         return printSuccess
+    }
+
+    override fun isDHCPEnabled(): Boolean? {
+        return hasDHCP
     }
 
     override fun close() {

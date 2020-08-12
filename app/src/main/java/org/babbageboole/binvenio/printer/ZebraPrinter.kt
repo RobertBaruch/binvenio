@@ -47,25 +47,24 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     }
 
     override fun print(data: String): Boolean {
-        if (outStream == null || inStream == null) return false
-        return try {
-            Timber.i("sending data to printer")
-            val reader = BufferedReader(InputStreamReader(inStream))
-            outStream!!.write(data.toByteArray())
-            // It could take a second to print the label. Wait for a large enough interval.
-            socket!!.soTimeout = 3000
-            val line = reader.readLine()
-            line == "OK:printed"
-        } catch (ex: Exception) {
-            Timber.e(ex)
-            false
-        }
+        // It could take a second or so to print the label, so give it more than enough time.
+        val rsp = sendAndAwaitResponse(data, 3000)
+        return rsp != null && rsp == "OK:printed"
+    }
+
+    override fun isDHCPEnabled(): Boolean? {
+        val rsp = sendAndAwaitResponse("""! U1 getvar "ip.dhcp.enable"\n""", 500)
+        return rsp?.let { return rsp == """"on"""" }
     }
 
     private fun tryConnect(): Socket? {
         return connect(500)?.let {
             return checkHostInformation()?.let { socket }
         }
+    }
+
+    private fun checkHostInformation(): String? {
+        return sendAndAwaitResponse("~HI\n", 500)
     }
 
     private fun connect(timeoutMillis: Int): Socket? {
@@ -86,15 +85,15 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
         }
     }
 
-    private fun checkHostInformation(): String? {
+    private fun sendAndAwaitResponse(data: String, timeoutMillis: Int): String? {
         if (inStream == null || outStream == null) return null
         return try {
-            outStream!!.write("~HI\n".toByteArray())
+            outStream!!.write(data.toByteArray())
             val reader = BufferedReader(InputStreamReader(inStream))
-            socket!!.soTimeout = 500
+            socket!!.soTimeout = timeoutMillis
             val line = reader.readLine()
-            Timber.i("Printer sent reply to host info request: $line")
-            return line
+            Timber.i("Printer sent reply: $line")
+            line
         } catch (ex: Exception) {
             Timber.i("Failed to read: $ex")
             null

@@ -45,6 +45,7 @@ class SearchPrinterDialogFragment : DialogFragment() {
     interface SearchPrinterDialogListener {
         fun onPrinterFound(dialog: DialogFragment)
         fun onCancelSearchPrinter(dialog: DialogFragment)
+        fun onPrinterHasDHCP(dialog: DialogFragment)
     }
 
     // Override the Fragment.onAttach() method to instantiate the NoticeDialogListener
@@ -84,17 +85,13 @@ class SearchPrinterDialogFragment : DialogFragment() {
 
             viewModel.success.observe(this, Observer {
                 it?.let {
-                    // val app : BinvenioApplication = requireActivity().application as BinvenioApplication
-
-                    if (it) {
-                        // app.printerAddr = viewModel.addr.value
-                        listener.onPrinterFound(this)
-                    }
-                    else {
-                        // app.printerAddr = null
-                        listener.onCancelSearchPrinter(this)
-                    }
                     dialog?.dismiss()
+                    when (it) {
+                        SearchPrinterViewModel.OK -> listener.onPrinterFound(this)
+                        SearchPrinterViewModel.NO_PRINTER -> listener.onCancelSearchPrinter(this)
+                        SearchPrinterViewModel.NO_NETWORK -> listener.onCancelSearchPrinter(this)
+                        SearchPrinterViewModel.HAS_DHCP -> listener.onPrinterHasDHCP(this)
+                    }
                 }
             })
 

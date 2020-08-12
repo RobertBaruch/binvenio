@@ -25,6 +25,13 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 
 class SearchPrinterViewModel(application: Application) : CommonViewModel(application) {
+    companion object {
+        const val NO_PRINTER = 0
+        const val HAS_DHCP = 1
+        const val OK = 2
+        const val NO_NETWORK = 3
+    }
+
     private var _addr = MutableLiveData<InetSocketAddress?>(null)
     val addr: LiveData<InetSocketAddress?>
         get() = _addr
@@ -36,8 +43,8 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
     val progress: LiveData<Int>
         get() = _progress
 
-    private var _success = MutableLiveData<Boolean?>(null)
-    val success: LiveData<Boolean?>
+    private var _success = MutableLiveData<Int?>(null)
+    val success: LiveData<Int?>
         get() = _success
 
 
@@ -45,7 +52,7 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
         setPrinterAddr(null)
         Timber.i("Checking if we have a network")
         if (!hasNetwork()) {
-            _success.value = false
+            _success.value = NO_NETWORK
             return
         }
         val bs = ByteArray(4)
@@ -62,12 +69,16 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
 
                     canConnect(addr)?.use {
                         setPrinterAddr(addr)
-                        _success.value = true
+                        if (it.isDHCPEnabled() != false) {
+                            _success.value = HAS_DHCP
+                        } else {
+                            _success.value = OK
+                        }
                         return@launch
                     }
                     _progress.value = (100 * b) / 255
                 }
-                _success.value = false
+                _success.value = NO_PRINTER
             } catch (ex: Exception) {
                 // During testing you can get a CancelledException, or an IllegalStateException
                 // because "The component was not created. Check that you have added the HiltAndroidRule" --

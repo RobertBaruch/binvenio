@@ -48,6 +48,10 @@ abstract class CommonViewModel(
     val showPrintSearch: LiveData<Boolean>
         get() = _showPrintSearch
 
+    protected var _showDHCPWarning = MutableLiveData<Boolean>()
+    val showDHCPWarning: LiveData<Boolean>
+        get() = _showDHCPWarning
+
     protected var _printComplete = MutableLiveData<Boolean>()
     val printComplete: LiveData<Boolean>
         get() = _printComplete
@@ -169,7 +173,9 @@ abstract class CommonViewModel(
     }
 
     protected fun setPrinterAddr(addr: InetSocketAddress?) {
-        getPrinterAddressHolder(getApplication<Application>().applicationContext).setPrinterAddr(addr)
+        getPrinterAddressHolder(getApplication<Application>().applicationContext).setPrinterAddr(
+            addr
+        )
     }
 
     // The x coordinate depends on the paper width.
@@ -231,10 +237,16 @@ abstract class CommonViewModel(
         return true
     }
 
-    open fun onPrinterFound() {
+    open fun onPrinterFound() {}
+
+    open fun onCancelSearchPrinter() {}
+
+    fun onPrinterHasDHCP() {
+        _showDHCPWarning.value = true
     }
 
-    open fun onCancelSearchPrinter() {
+    fun dhcpWarningShown() {
+        _showDHCPWarning.value = false
     }
 
     open fun onPrintComplete() {

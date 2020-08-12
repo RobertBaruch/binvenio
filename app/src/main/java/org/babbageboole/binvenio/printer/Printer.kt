@@ -21,6 +21,7 @@ interface Printer : Closeable {
     fun open(addr: InetSocketAddress): Printer?
     fun canConnect(): Boolean?
     fun print(data: String): Boolean
+    fun isDHCPEnabled(): Boolean?
 }
 
 interface PrinterFactory {

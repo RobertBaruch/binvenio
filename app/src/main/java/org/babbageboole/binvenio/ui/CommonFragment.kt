@@ -31,7 +31,10 @@ import timber.log.Timber
 
 // CommonFragment is a fragment that can do snackbar messages and errors, and can scan.
 // It can also be set to observe its ViewModel's Boolean or String observables for navigation cues.
-abstract class CommonFragment<VM : CommonViewModel, DB : ViewDataBinding> : Fragment(), SearchPrinterDialogFragment.SearchPrinterDialogListener {
+abstract class CommonFragment<VM : CommonViewModel, DB : ViewDataBinding> : Fragment(),
+    SearchPrinterDialogFragment.SearchPrinterDialogListener,
+    WarnAboutDHCPDialogFragment.DialogListener {
+
     protected lateinit var binding: DB
     protected lateinit var viewModel: VM
 
@@ -64,6 +67,13 @@ abstract class CommonFragment<VM : CommonViewModel, DB : ViewDataBinding> : Frag
                 dialog.show(childFragmentManager, "print_search")
             }
         })
+        viewModel.showDHCPWarning.observe(viewLifecycleOwner, Observer {
+            if (it) {
+                viewModel.dhcpWarningShown()
+                val dialog = WarnAboutDHCPDialogFragment()
+                dialog.show(childFragmentManager, "dhcp_warning")
+            }
+        })
     }
 
     fun addNavigationObserver(observable: LiveData<Boolean>, where: NavDirections) {
@@ -75,7 +85,10 @@ abstract class CommonFragment<VM : CommonViewModel, DB : ViewDataBinding> : Frag
         })
     }
 
-    fun addNavigationStringObserver(observable: LiveData<String?>, where: (String) -> NavDirections) {
+    fun addNavigationStringObserver(
+        observable: LiveData<String?>,
+        where: (String) -> NavDirections
+    ) {
         observable.observe(viewLifecycleOwner, Observer {
             it?.let {
                 findNavController().navigate(where(it))
@@ -140,5 +153,13 @@ abstract class CommonFragment<VM : CommonViewModel, DB : ViewDataBinding> : Frag
 
     override fun onCancelSearchPrinter(dialog: DialogFragment) {
         viewModel.onCancelSearchPrinter()
+    }
+
+    override fun onPrinterHasDHCP(dialog: DialogFragment) {
+        viewModel.onPrinterHasDHCP()
+    }
+
+    override fun onDHCPAcknowledged(dialog: DialogFragment) {
+        viewModel.onPrinterFound()
     }
 }

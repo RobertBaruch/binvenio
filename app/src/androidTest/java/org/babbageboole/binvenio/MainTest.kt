@@ -73,6 +73,14 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// NOTE! Before running this test, you need to turn animations off on the device, otherwise
+// there will be flakes and some tests will just fail.
+// On your device, under Settings > Developer options, disable the following 3 settings:
+//
+// * Window animation scale
+// * Transition animation scale
+// * Animator duration scale
+
 // A custom runner to set up the instrumented application class for tests. It is referenced
 // in the module build.gradle file under testInstrumentationRunner. A custom [AndroidJUnitRunner]
 // used to replace the application used in tests. Note that Hilt
@@ -172,10 +180,6 @@ class MainTest {
     @Throws(IOException::class)
     fun tearDown() {
         intentsTestRule.finishActivity()
-
-//        db.clearAllTables()
-//        ResDatabase.closeInstance()
-//        context.deleteDatabase(ResDatabase.getName())
     }
 
     // Stub an intent to return the given qr string.
@@ -1091,15 +1095,7 @@ class MainTest {
         assertThat(resDao.getRes("containerQR")).isNull()
     }
 
-    @Test
-    fun scanForPrinter() {
-        openActionBarOverflowOrOptionsMenu(ApplicationProvider.getApplicationContext())
-        // The View representing the menu item doesn't have the ID of the item :(
-        onView(withText(R.string.search_printer_item)).perform(click())
-        onView(withText("Searching for printer")).inRoot(isDialog()).check(matches(isDisplayed()))
-        onView(withText(R.string.checking_ip_label_text)).inRoot(isDialog())
-            .check(matches(isDisplayed()))
-
+    private fun awaitPrinterAddressNonNull() {
         onView(isRoot()).perform(object : ViewAction {
             override fun getDescription(): String =
                 "waiting for the printer address to become non-null"
@@ -1125,12 +1121,61 @@ class MainTest {
                     .build()
             }
         })
+    }
+
+    // Checking dialogs is incredibly cumbersome in Espresso, especially if the dialog
+    // has some delay in immediately show up. So rather than create a test that I really
+    // feel is quite intrusive in the app (e.g. IdlingResources), I'm just not going to test.
+
+//    private fun awaitDialogWithText(textResource: Int, timeoutMillis: Int) {
+//        onView(isRoot()).perform(object : ViewAction {
+//            override fun getDescription(): String =
+//                "waiting for a dialog with text resource $textResource"
+//
+//            override fun getConstraints(): Matcher<View> = isRoot()
+//
+//            override fun perform(uiController: UiController?, view: View?) {
+//                uiController!!.loopMainThreadUntilIdle()
+//                val startTime = System.currentTimeMillis()
+//                val endTime = startTime + timeoutMillis
+//
+//                while (System.currentTimeMillis() < endTime) {
+//                    uiController.loopMainThreadForAtLeast(100)
+//                    val viewMatcher = withText(textResource)
+//                    if (viewMatcher.matches(isDisplayed())) return
+//                }
+//                throw PerformException.Builder()
+//                    .withCause(TimeoutException())
+//                    .withViewDescription(HumanReadables.describe(view))
+//                    .withActionDescription(this.description)
+//                    .build()
+//            }
+//        })
+//    }
+
+    @Test
+    fun scanForPrinter() {
+        TestPrinter.printSuccess = true
+        TestPrinter.hasDHCP = false
+
+        openActionBarOverflowOrOptionsMenu(ApplicationProvider.getApplicationContext())
+        // The View representing the menu item doesn't have the ID of the item :(
+        onView(withText(R.string.search_printer_item)).perform(click())
+        onView(withText("Searching for printer")).inRoot(isDialog()).check(matches(isDisplayed()))
+        onView(withText(R.string.checking_ip_label_text)).inRoot(isDialog())
+            .check(matches(isDisplayed()))
+
+        awaitPrinterAddressNonNull()
+
         onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
             .check(matches(withText(containsString("Printer found"))))
     }
 
     @Test
     fun cancel_scanForPrinter() {
+        TestPrinter.printSuccess = true
+        TestPrinter.hasDHCP = false
+
         openActionBarOverflowOrOptionsMenu(ApplicationProvider.getApplicationContext())
         // The View representing the menu item doesn't have the ID of the item :(
         onView(withText(R.string.search_printer_item)).perform(click())
@@ -1143,8 +1188,33 @@ class MainTest {
             .check(matches(withText(containsString("Printer not found"))))
     }
 
+    // Do not test: requires waiting for a dialog
+//    @Test
+//    fun dhcpWarning() {
+//        TestPrinter.printSuccess = true
+//        TestPrinter.hasDHCP = true
+//
+//        openActionBarOverflowOrOptionsMenu(ApplicationProvider.getApplicationContext())
+//        // The View representing the menu item doesn't have the ID of the item :(
+//        onView(withText(R.string.search_printer_item)).perform(click())
+//        onView(withText("Searching for printer")).inRoot(isDialog()).check(matches(isDisplayed()))
+//        onView(withText(R.string.checking_ip_label_text)).inRoot(isDialog())
+//            .check(matches(isDisplayed()))
+//
+//        awaitPrinterAddressNonNull()
+//        awaitDialogWithText(R.string.dhcp_warning, 1000)
+//        // onView(withText("DHCP")).inRoot(isDialog()).check(matches(isDisplayed()))
+//        onView(withText(R.string.ok)).inRoot(isDialog()).perform(click())
+//
+//        onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
+//            .check(matches(withText(containsString("Printer found"))))
+//    }
+
     @Test
     fun printSticker() {
+        TestPrinter.printSuccess = true
+        TestPrinter.hasDHCP = false
+
         resDao.insertRes(
             Res(
                 qr = "containerQR",
@@ -1166,6 +1236,9 @@ class MainTest {
 
     @Test
     fun failedToPrintSticker() {
+        TestPrinter.printSuccess = false
+        TestPrinter.hasDHCP = false
+
         resDao.insertRes(
             Res(
                 qr = "containerQR",
@@ -1173,7 +1246,7 @@ class MainTest {
                 isContainer = true
             )
         )
-        printerAddressHolder.setPrinterAddr(InetSocketAddress("192.168.1.101", 6101))
+        printerAddressHolder.setPrinterAddr(InetSocketAddress("192.168.1.100", 6101))
         stubIntents("containerQR")
 
         onView(withId(R.id.scan_button)).perform(click())
@@ -1184,4 +1257,5 @@ class MainTest {
         onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
             .check(matches(withText(containsString("Print failed"))))
     }
+
 }

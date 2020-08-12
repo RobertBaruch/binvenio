@@ -75,4 +75,6 @@
     <string name="checking_ip_label_text">Checking:</string>
     <string name="search_printer_item">Search for printer...</string>
     <string name="print_button_text">Print sticker</string>
+    <string name="dhcp_warning">The printer appears to be set for DHCP, which is known to be flaky. You can still use the printer, but you will probably want to change the printer to use a static address. Please read your printer\'s user manual for instructions on how to do this.</string>
+    <string name="ok">OK</string>
 </resources>
