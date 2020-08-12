@@ -44,7 +44,7 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
     fun onSearch() {
         setPrinterAddr(null)
         Timber.i("Checking if we have a network")
-        if (getNetwork() == null) {
+        if (!hasNetwork()) {
             _success.value = false
             return
         }

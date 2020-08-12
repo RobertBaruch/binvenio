@@ -14,11 +14,21 @@
 
 package org.babbageboole.binvenio
 
+import android.net.Network
 import org.babbageboole.binvenio.printer.Printer
 import org.babbageboole.binvenio.printer.PrinterFactory
-import org.babbageboole.binvenio.printer.ZebraPrinter
 import java.net.InetSocketAddress
 import javax.inject.Inject
+
+class TestNetworkGetter @Inject constructor() : NetworkGetter {
+    override fun getNetwork(): Network? {
+        return null
+    }
+
+    override fun hasNetwork(): Boolean {
+        return true
+    }
+}
 
 class TestPrinterFactory @Inject constructor(var networkGetter: NetworkGetter) : PrinterFactory {
     override fun get(): Printer {
@@ -27,9 +37,15 @@ class TestPrinterFactory @Inject constructor(var networkGetter: NetworkGetter) :
 }
 
 class TestPrinter(private val networkGetter: NetworkGetter) : Printer {
+    private var printSuccess: Boolean = true
+
     override fun open(addr: InetSocketAddress): Printer? {
         Thread.sleep(10)
         if (addr.address.address[3] == 100.toByte()) return this
+        if (addr.address.address[3] == 101.toByte()) {
+            printSuccess = false
+            return this
+        }
         return null
     }
 
@@ -38,7 +54,7 @@ class TestPrinter(private val networkGetter: NetworkGetter) : Printer {
     }
 
     override fun print(data: String): Boolean {
-        TODO("Not yet implemented")
+        return printSuccess
     }
 
     override fun close() {

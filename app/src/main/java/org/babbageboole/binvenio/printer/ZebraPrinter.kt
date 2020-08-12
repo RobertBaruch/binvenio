@@ -16,7 +16,9 @@ package org.babbageboole.binvenio.printer
 
 import org.babbageboole.binvenio.NetworkGetter
 import timber.log.Timber
+import java.io.BufferedReader
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -45,12 +47,17 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     }
 
     override fun print(data: String): Boolean {
-        if (outStream == null) return false
+        if (outStream == null || inStream == null) return false
         return try {
             Timber.i("sending data to printer")
+            val reader = BufferedReader(InputStreamReader(inStream))
             outStream!!.write(data.toByteArray())
-            true
+            // It could take a second to print the label. Wait for a large enough interval.
+            socket!!.soTimeout = 3000
+            val line = reader.readLine()
+            line == "OK:printed"
         } catch (ex: Exception) {
+            Timber.e(ex)
             false
         }
     }
@@ -80,26 +87,14 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     }
 
     private fun checkHostInformation(): String? {
-        val stringBuilder = StringBuilder()
-
         if (inStream == null || outStream == null) return null
         return try {
             outStream!!.write("~HI\n".toByteArray())
-            var c = inStream!!.read()
-            if (c != 2) {
-                Timber.i("Expected 2 (STX) but got $c")
-                return null
-            }
-            while (c != 3 /* ETX */) {
-                stringBuilder.append(c.toChar())
-                if (inStream!!.available() <= 0) {
-                    Timber.i("Failed to end with ETX")
-                    break
-                }
-                c = inStream!!.read()
-            }
-            Timber.i("Printer sent reply to host info request")
-            stringBuilder.deleteCharAt(0).toString()
+            val reader = BufferedReader(InputStreamReader(inStream))
+            socket!!.soTimeout = 500
+            val line = reader.readLine()
+            Timber.i("Printer sent reply to host info request: $line")
+            return line
         } catch (ex: Exception) {
             Timber.i("Failed to read: $ex")
             null

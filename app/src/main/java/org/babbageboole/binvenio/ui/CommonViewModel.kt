@@ -160,6 +160,10 @@ abstract class CommonViewModel(
         return getNetworkGetter(getApplication<Application>().applicationContext).getNetwork()
     }
 
+    protected fun hasNetwork(): Boolean {
+        return getNetworkGetter(getApplication<Application>().applicationContext).hasNetwork()
+    }
+
     protected fun getPrinterAddr(): InetSocketAddress? {
         return getPrinterAddressHolder(getApplication<Application>().applicationContext).getPrinterAddr()
     }
@@ -176,8 +180,7 @@ abstract class CommonViewModel(
     // With an 10 dot wide font and 2 dot gap, only 16 characters
     // work starting from x=165 (192 dots, to x=357)
     fun printSticker(qr: String, name: String): Boolean {
-        val network = getNetwork()
-        if (network == null) {
+        if (!hasNetwork()) {
             _showError.value = "No wireless connectivity"
             return false
         }
@@ -213,12 +216,16 @@ abstract class CommonViewModel(
             ^FO165,85
             ^ADN,18,10
             ^FD${lines[3]}^FS
+            ^FN0^FDprinted^FS
+            ^FH_^HV0,8,OK:,_0D_0A,L^FS
             ^XZ
         """.trimIndent()
 
         uiScope.launch {
             if (print(addr, str)) {
                 _printComplete.value = true
+            } else {
+                _showError.value = "Print failed."
             }
         }
         return true

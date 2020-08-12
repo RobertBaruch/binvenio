@@ -39,6 +39,7 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.intent.rule.IntentsTestRule
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.*
+import androidx.test.espresso.util.HumanReadables
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
@@ -67,6 +68,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import timber.log.Timber
 import java.io.IOException
+import java.net.InetSocketAddress
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -131,8 +133,8 @@ class MainTest {
 
         @Provides
         @Singleton
-        fun provideNetworkGetter(connectivityMonitor: ConnectivityMonitor): NetworkGetter {
-            return RealNetworkGetter(connectivityMonitor)
+        fun provideNetworkGetter(): NetworkGetter {
+            return TestNetworkGetter()
         }
 
         @Provides
@@ -1118,6 +1120,7 @@ class MainTest {
                 }
                 throw PerformException.Builder()
                     .withCause(TimeoutException())
+                    .withViewDescription(HumanReadables.describe(view))
                     .withActionDescription(this.description)
                     .build()
             }
@@ -1139,5 +1142,46 @@ class MainTest {
         onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
             .check(matches(withText(containsString("Printer not found"))))
     }
-}
 
+    @Test
+    fun printSticker() {
+        resDao.insertRes(
+            Res(
+                qr = "containerQR",
+                name = "bin",
+                isContainer = true
+            )
+        )
+        printerAddressHolder.setPrinterAddr(InetSocketAddress("192.168.1.100", 6101))
+        stubIntents("containerQR")
+
+        onView(withId(R.id.scan_button)).perform(click())
+        checkTitle(R.string.container_title)
+
+        onView(withId(R.id.print_button)).perform(click())
+
+        onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
+            .check(matches(withText(containsString("printed"))))
+    }
+
+    @Test
+    fun failedToPrintSticker() {
+        resDao.insertRes(
+            Res(
+                qr = "containerQR",
+                name = "bin",
+                isContainer = true
+            )
+        )
+        printerAddressHolder.setPrinterAddr(InetSocketAddress("192.168.1.101", 6101))
+        stubIntents("containerQR")
+
+        onView(withId(R.id.scan_button)).perform(click())
+        checkTitle(R.string.container_title)
+
+        onView(withId(R.id.print_button)).perform(click())
+
+        onView(withId(com.google.android.material.R.id.snackbar_text)).check(matches(isDisplayed()))
+            .check(matches(withText(containsString("Print failed"))))
+    }
+}

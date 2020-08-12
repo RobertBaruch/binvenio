@@ -46,6 +46,7 @@ class RealPrinterAddressHolder : PrinterAddressHolder {
 
 interface NetworkGetter {
     fun getNetwork(): Network?
+    fun hasNetwork(): Boolean
 }
 
 class RealNetworkGetter(private val connectivityMonitor: ConnectivityMonitor) : NetworkGetter {
@@ -53,12 +54,17 @@ class RealNetworkGetter(private val connectivityMonitor: ConnectivityMonitor) : 
         Timber.i("Getting network from connectivity monitor")
         return connectivityMonitor.getNetwork()
     }
+
+    override fun hasNetwork(): Boolean {
+        return connectivityMonitor.hasNetwork()
+    }
 }
 
 interface ConnectivityMonitor {
     fun startMonitoring()
     fun stopMonitoring()
     fun getNetwork(): Network?
+    fun hasNetwork(): Boolean
 }
 
 class RealConnectivityMonitor(private val applicationContext: Context) : ConnectivityMonitor {
@@ -109,6 +115,11 @@ class RealConnectivityMonitor(private val applicationContext: Context) : Connect
         synchronized(this) {
             return _network.value
         }
+    }
+
+    override fun hasNetwork(): Boolean {
+        synchronized(this) {}
+        return _network.value != null
     }
 }
 
