@@ -19,7 +19,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.babbageboole.binvenio.printer.Printer
 import timber.log.Timber
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -69,7 +72,7 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
 
                     canConnect(addr)?.use {
                         setPrinterAddr(addr)
-                        if (it.isDHCPEnabled() != false) {
+                        if (isPrinterDHCPEnabled(it) != false) {
                             _success.value = HAS_DHCP
                         } else {
                             _success.value = OK
@@ -90,4 +93,9 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
         Timber.i("Returning from onSearch")
     }
 
+    private suspend fun isPrinterDHCPEnabled(printer: Printer): Boolean? {
+        return withContext(Dispatchers.IO) {
+            printer.isDHCPEnabled()
+        }
+    }
 }
