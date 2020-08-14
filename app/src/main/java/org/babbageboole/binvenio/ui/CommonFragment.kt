@@ -117,17 +117,15 @@ abstract class CommonFragment<VM : CommonViewModel, DB : ViewDataBinding> : Frag
         }
 
         Timber.i("onActivityResult, requestCode $requestCode, resultCode $resultCode, data $resultData")
-        var result: IntentResult? =
+        val result: IntentResult? =
             IntentIntegrator.parseActivityResult(requestCode, resultCode, resultData)
         if (result == null) {
             super.onActivityResult(requestCode, resultCode, resultData)
             Timber.i("fragment onActivityResult: no result")
             return
         }
-        val qr = result.contents
-        var format = result.formatName
-        Timber.i("fragment onActivityResult: $result")
-        Timber.i("fragment onActivityResult: contents = ${result.contents}")
+        var qr = result.contents
+        val format = result.formatName
         viewModel.onScanned(format, qr)
     }
 

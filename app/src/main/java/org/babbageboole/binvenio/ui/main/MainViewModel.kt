@@ -83,15 +83,31 @@ class MainViewModel(
     }
 
     fun onAddItem() {
-        //_why.value = "add-item"
-        //_bringUpScanner.value = true
-        _navigateToAddItem.value = UUID.randomUUID().toString()
+        uiScope.launch {
+            _navigateToAddItem.value = findAvailableRandomQR()
+        }
     }
 
     fun onAddContainer() {
-//        _why.value = "add-bin"
-//        _bringUpScanner.value = true
-        _navigateToAddContainer.value = UUID.randomUUID().toString()
+        uiScope.launch {
+            _navigateToAddContainer.value = findAvailableRandomQR()
+        }
+    }
+
+    // Generates random QRs until one isn't found in the database.
+    // Strictly speaking we don't have to check, since we check later
+    // on after you add an item if the QR code already exists. But, the
+    // code doesn't generate a new one, leaving you no choice but to cancel
+    // adding the item and trying again. That isn't likely to happen.
+    // Nevertheless, even though there are about 6e19 possible QRs, I don't
+    // want collisions to be even a remote possibility.
+    private suspend fun findAvailableRandomQR(): String {
+        return withContext(Dispatchers.IO) {
+            while (true) {
+                val qr = generateRandomQR()
+                database.getRes(qr) ?: return@withContext qr
+            }
+        }.toString()
     }
 
     fun onNuke() {
@@ -164,19 +180,10 @@ class MainViewModel(
     }
 
     private fun onQRScanned(qr: String) {
-        Timber.i("QR scanned: $qr, why: ${_why.value ?: "null"}")
+        Timber.i("QR scanned: $qr")
 
         uiScope.launch {
             val res = getRes(qr)
-
-            if (_why.value != null) {
-                when {
-                    res != null -> _showError.value = "That QR is already registered."
-                    _why.value == "add-item" -> _navigateToAddItem.value = qr
-                    else -> _navigateToAddContainer.value = qr
-                }
-                return@launch
-            }
 
             when {
                 res == null -> _showError.value = "That QR was not found."

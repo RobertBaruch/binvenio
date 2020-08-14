@@ -58,6 +58,7 @@ import org.babbageboole.binvenio.database.Res
 import org.babbageboole.binvenio.database.ResDatabase
 import org.babbageboole.binvenio.database.ResDatabaseDao
 import org.babbageboole.binvenio.printer.PrinterFactory
+import org.babbageboole.binvenio.ui.CommonViewModel
 import org.babbageboole.binvenio.ui.bin_scanned.ContentsAdapter
 import org.hamcrest.Matcher
 import org.hamcrest.Matchers.containsString
@@ -444,14 +445,14 @@ class MainTest {
         )
         resDao.insertRes(
             Res(
-                qr = "itemQR",
+                qr = "xAABB",
                 name = "preexisting item",
                 isContainer = false,
                 locationQR = "containerQR",
                 count = 1
             )
         )
-        stubIntents("itemQR")
+        stubIntents("xAABB")
 
         onView(withId(R.id.scan_button)).perform(click())
 
@@ -459,7 +460,7 @@ class MainTest {
 
         checkTitle(R.string.item_title)
 
-        onView(withId(R.id.qr_text)).check(matches(withText("itemQR")))
+        onView(withId(R.id.qr_text)).check(matches(withText("xAABB")))
         onView(withId(R.id.name_edit)).check(matches(withText("preexisting item")))
         onView(withId(R.id.count_text)).check(matches(withText("1")))
         onView(withId(R.id.location_text)).check(matches(withText("preexisting container")))
@@ -493,7 +494,7 @@ class MainTest {
         pressBack()
         onView(withId(R.id.binvenio_title)).check(matches(isDisplayed()))
 
-        val item = resDao.getNonContainer("itemQR")
+        val item = resDao.getNonContainer("xAABB")
         assertThat(item!!.count).isEqualTo(1)
         assertThat(item.name).isEqualTo("preexisting item")
     }

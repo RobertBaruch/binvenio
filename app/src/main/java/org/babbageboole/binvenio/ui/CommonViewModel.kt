@@ -32,17 +32,22 @@ import org.babbageboole.binvenio.database.ResDatabase
 import org.babbageboole.binvenio.printer.Printer
 import org.babbageboole.binvenio.printer.PrinterFactory
 import timber.log.Timber
+import java.lang.StringBuilder
 import java.net.InetSocketAddress
+import java.security.SecureRandom
 
 abstract class CommonViewModel(
     application: Application
 ) : AndroidViewModel(application) {
+    companion object {
+        const val printables = "`1234567890-=~!@#$%^&*()_+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}|;:'\",<.>/?`\\"
+    }
+
     protected var database = ResDatabase.getInstance(application).resDatabaseDao
 
     protected var _bringUpScanner = MutableLiveData<Boolean>()
     val bringUpScanner: LiveData<Boolean>
         get() = _bringUpScanner
-    protected var _why = MutableLiveData<String?>()
 
     protected var _showPrintSearch = MutableLiveData<Boolean>()
     val showPrintSearch: LiveData<Boolean>
@@ -116,6 +121,11 @@ abstract class CommonViewModel(
         return entryPoint.printerAddressHolder()
     }
 
+    protected fun generateRandomQR(): String {
+        val rand = SecureRandom()
+        return IntRange(0, 9).joinToString(separator = "") { "${printables[rand.nextInt(printables.length)]}" }
+    }
+
     /**
      * Called when the ViewModel is dismantled.
      * At this point, we want to cancel all coroutines;
@@ -145,7 +155,6 @@ abstract class CommonViewModel(
     }
 
     fun onScan() {
-        _why.value = null
         _bringUpScanner.value = true
     }
 
@@ -185,6 +194,8 @@ abstract class CommonViewModel(
     // so x=75 to x=375).
     // With an 10 dot wide font and 2 dot gap, only 16 characters
     // work starting from x=165 (192 dots, to x=357)
+    // The format of qr may be xAABBCC[more hex digits...] in
+    // which case it will be converted to x+binary.
     fun printSticker(qr: String, name: String): Boolean {
         if (!hasNetwork()) {
             _showError.value = "No wireless connectivity"
@@ -205,11 +216,69 @@ abstract class CommonViewModel(
         for ((index, chunk) in chunks.withIndex()) {
             if (index < lines.size) lines[index] = chunk
         }
+
+        var qrCmd = "^BQN,2,3^FDQA,$qr^FS"
+
         val str = """
             ^XA
             ^FO90,20
-            ^BQN,2,2
-            ^FDQA,$qr^FS
+            $qrCmd
+            ^FO165,25
+            ^ADN,18,10
+            ^FD${lines[0]}^FS
+            ^FO165,45
+            ^ADN,18,10
+            ^FD${lines[1]}^FS
+            ^FO165,65
+            ^ADN,18,10
+            ^FD${lines[2]}^FS
+            ^FO165,85
+            ^ADN,18,10
+            ^FD${lines[3]}^FS
+            ^FN0^FDprinted^FS
+            ^FH_^HV0,8,OK:,_0D_0A,L^FS
+            ^XZ
+        """.trimIndent()
+
+        uiScope.launch {
+            if (print(addr, str)) {
+                _printComplete.value = true
+            } else {
+                _showError.value = "Print failed."
+            }
+        }
+        return true
+    }
+
+    fun printSticker(qr: ByteArray, name: String): Boolean {
+        if (!hasNetwork()) {
+            _showError.value = "No wireless connectivity"
+            return false
+        }
+
+        val addr = getPrinterAddr()
+        if (addr == null) {
+            Timber.i("Need to find printer")
+            _showPrintSearch.value = true
+            return false
+        }
+
+        _showMsg.value = "Printing sticker..."
+
+        val lines = mutableListOf("", "", "", "")
+        val chunks = name.chunked(16)
+        for ((index, chunk) in chunks.withIndex()) {
+            if (index < lines.size) lines[index] = chunk
+        }
+        val nbytes = "%04d".format(qr.size)
+        val bqr = qr.joinToString(separator = "") { "_%02X".format(it) }
+
+        val str = """
+            ^XA
+            ^FO90,20
+            ^BQN,2,3
+            ^FH
+            ^FDQM,B$nbytes$bqr^FS
             ^FO165,25
             ^ADN,18,10
             ^FD${lines[0]}^FS
