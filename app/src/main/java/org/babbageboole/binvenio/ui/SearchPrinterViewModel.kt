@@ -66,17 +66,18 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
             try {
                 for (b in 1.rangeTo(255)) {
                     bs[3] = b.toByte()
-                    val addr = InetSocketAddress(InetAddress.getByAddress(bs), 6101)
+
+                    var addr = InetSocketAddress(InetAddress.getByAddress(bs), 6101)
                     _addr.value = addr
                     Timber.i("Checking $addr")
+                    if (probePrinter(addr)) {
+                        return@launch
+                    }
 
-                    canConnect(addr)?.use {
-                        setPrinterAddr(addr)
-                        if (isPrinterDHCPEnabled(it) != false) {
-                            _success.value = HAS_DHCP
-                        } else {
-                            _success.value = OK
-                        }
+                    addr = InetSocketAddress(InetAddress.getByAddress(bs), 9100)
+                    _addr.value = addr
+                    Timber.i("Checking $addr")
+                    if (probePrinter(addr)) {
                         return@launch
                     }
                     _progress.value = (100 * b) / 255
@@ -91,6 +92,19 @@ class SearchPrinterViewModel(application: Application) : CommonViewModel(applica
             }
         }
         Timber.i("Returning from onSearch")
+    }
+
+    private suspend fun probePrinter(addr: InetSocketAddress): Boolean {
+        canConnect(addr)?.use {
+            setPrinterAddr(addr)
+            if (isPrinterDHCPEnabled(it) != false) {
+                _success.value = HAS_DHCP
+            } else {
+                _success.value = OK
+            }
+            return true
+        }
+        return false
     }
 
     private suspend fun isPrinterDHCPEnabled(printer: Printer): Boolean? {

@@ -14,7 +14,6 @@
 
 package org.babbageboole.binvenio.printer
 
-import android.util.JsonReader
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import org.babbageboole.binvenio.NetworkGetter
@@ -23,9 +22,9 @@ import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
-import java.lang.StringBuilder
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.*
 import javax.inject.Inject
 
 class ZebraPrinterFactory @Inject constructor(var networkGetter: NetworkGetter) : PrinterFactory {
@@ -39,6 +38,20 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     private var inStream: InputStream? = null
     private var outStream: OutputStream? = null
     private lateinit var addr: InetSocketAddress
+    private var modelstr: String? = null
+    private var model: Model? = null
+    private var firmware: String? = null
+    private var dpm: Int? = null
+
+    enum class Model {
+        ZD410, GX420D
+    }
+
+    companion object {
+        const val STX = 2.toChar()
+        const val ETX = 3.toChar()
+        const val JET_DIRECT_PORT = 9100
+    }
 
     override fun open(addr: InetSocketAddress): Printer? {
         this.addr = addr
@@ -57,10 +70,24 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     }
 
     override fun isDHCPEnabled(): Boolean? {
-        val rsp = sendAndAwaitResponseJSON("{}{\"ip.dhcp.enable\":null}\n",500)
+        return when (model) {
+            Model.ZD410 -> isDHCPEnabledJSON()
+            Model.GX420D -> isDHCPEnabledInternalString()
+            else -> null
+        }
+    }
+
+    private fun isDHCPEnabledJSON(): Boolean? {
+        val rsp = sendAndAwaitResponseJSON("{}{\"ip.dhcp.enable\":null}\n", 500)
         val v = rsp?.get("ip.dhcp.enable")?.asString
         return v?.let { return v == "on" }
     }
+
+    private fun isDHCPEnabledInternalString(): Boolean? {
+        val rsp = sendAndAwaitResponseQuoted("! U1 getvar \"internal_wired.ip.protocol\"\n", 500)
+        return rsp?.let { return rsp != "permanent" }
+    }
+
 
     private fun tryConnect(): Socket? {
         return connect(500)?.let {
@@ -69,7 +96,28 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     }
 
     private fun checkHostInformation(): String? {
-        return sendAndAwaitResponse("~HI\n", 3000)
+        if (addr.port == JET_DIRECT_PORT) {
+            // If a printer responds to this, it's a printer that accepts JetDirect, which means
+            // it isn't a Zebra printer.
+            if (sendAndAwaitResponse("@PJL INFO ID\n", 3000) != null) return null
+        }
+
+        var info = sendAndAwaitResponse("~HI\n", 500) ?: return null
+        if (!info.startsWith(STX) || !info.endsWith(ETX)) return null
+        info = info.drop(1).dropLast(1)
+        val elements = info.split(',')
+        modelstr = elements[0].toUpperCase(Locale.ROOT)
+        model = when {
+            modelstr!!.startsWith("ZD410") -> Model.ZD410
+            modelstr!!.startsWith("GX420D") -> Model.GX420D
+            else -> null
+        }
+        firmware = elements.elementAtOrNull(1)
+        dpm = elements.elementAtOrNull(2)?.toIntOrNull() ?: 6
+        Timber.i("Model: $model")
+        Timber.i("Firmware: $firmware")
+        Timber.i("DPM: $dpm")
+        return info
     }
 
     private fun connect(timeoutMillis: Int): Socket? {
@@ -98,6 +146,19 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
             val s = readUnbufferedJSON() ?: return null
             val gson = Gson()
             gson.fromJson(s, JsonObject::class.java)
+        } catch (ex: Exception) {
+            Timber.i("Failed to read: $ex")
+            Timber.e(ex)
+            null
+        }
+    }
+
+    private fun sendAndAwaitResponseQuoted(data: String, timeoutMillis: Int): String? {
+        if (inStream == null || outStream == null) return null
+        return try {
+            outStream!!.write(data.toByteArray())
+            socket!!.soTimeout = timeoutMillis
+            readUnbufferedQuoted() ?: null
         } catch (ex: Exception) {
             Timber.i("Failed to read: $ex")
             Timber.e(ex)
@@ -153,6 +214,21 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
                     else -> escapeLvl--
                 }
             }
+            s.append(c.toChar())
+        }
+        return s.toString()
+    }
+
+    private fun readUnbufferedQuoted(): String? {
+        val instr = inStream ?: return null
+        val s = StringBuilder()
+        var c = instr.read()
+        if (c == -1 || c != '"'.toInt()) return null
+
+        while (true) {
+            c = instr.read()
+            if (c == -1) return null
+            if (c == '"'.toInt()) break
             s.append(c.toChar())
         }
         return s.toString()

@@ -250,62 +250,6 @@ abstract class CommonViewModel(
         return true
     }
 
-    fun printSticker(qr: ByteArray, name: String): Boolean {
-        if (!hasNetwork()) {
-            _showError.value = "No wireless connectivity"
-            return false
-        }
-
-        val addr = getPrinterAddr()
-        if (addr == null) {
-            Timber.i("Need to find printer")
-            _showPrintSearch.value = true
-            return false
-        }
-
-        _showMsg.value = "Printing sticker..."
-
-        val lines = mutableListOf("", "", "", "")
-        val chunks = name.chunked(16)
-        for ((index, chunk) in chunks.withIndex()) {
-            if (index < lines.size) lines[index] = chunk
-        }
-        val nbytes = "%04d".format(qr.size)
-        val bqr = qr.joinToString(separator = "") { "_%02X".format(it) }
-
-        val str = """
-            ^XA
-            ^FO90,20
-            ^BQN,2,3
-            ^FH
-            ^FDQM,B$nbytes$bqr^FS
-            ^FO165,25
-            ^ADN,18,10
-            ^FD${lines[0]}^FS
-            ^FO165,45
-            ^ADN,18,10
-            ^FD${lines[1]}^FS
-            ^FO165,65
-            ^ADN,18,10
-            ^FD${lines[2]}^FS
-            ^FO165,85
-            ^ADN,18,10
-            ^FD${lines[3]}^FS
-            ^FN0^FDprinted^FS
-            ^FH_^HV0,8,OK:,_0D_0A,L^FS
-            ^XZ
-        """.trimIndent()
-
-        uiScope.launch {
-            if (print(addr, str)) {
-                _printComplete.value = true
-            } else {
-                _showError.value = "Print failed."
-            }
-        }
-        return true
-    }
-
     open fun onPrinterFound() {}
 
     open fun onCancelSearchPrinter() {}
