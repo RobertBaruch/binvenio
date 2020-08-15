@@ -14,6 +14,7 @@
 
 package org.babbageboole.binvenio.printer
 
+import android.graphics.Point
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import org.babbageboole.binvenio.NetworkGetter
@@ -66,7 +67,7 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
     override fun print(data: String): Boolean {
         // It could take a second or so to print the label, so give it more than enough time.
         val rsp = sendAndAwaitResponse(data, 3000)
-        return rsp != null && rsp == "OK:printed"
+        return rsp != null && rsp == "OK:"
     }
 
     override fun isDHCPEnabled(): Boolean? {
@@ -74,6 +75,14 @@ class ZebraPrinter(private val networkGetter: NetworkGetter) : Printer {
             Model.ZD410 -> isDHCPEnabledJSON()
             Model.GX420D -> isDHCPEnabledInternalString()
             else -> null
+        }
+    }
+
+    override fun getTopLeftCoords(): Point {
+        return when (model) {
+            Model.ZD410 -> Point(90, 20)
+            Model.GX420D -> Point(20, 20)
+            else -> Point(20, 20)
         }
     }
 

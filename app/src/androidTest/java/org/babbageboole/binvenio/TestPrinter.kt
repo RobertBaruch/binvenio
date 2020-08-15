@@ -14,6 +14,7 @@
 
 package org.babbageboole.binvenio
 
+import android.graphics.Point
 import android.net.Network
 import org.babbageboole.binvenio.printer.Printer
 import org.babbageboole.binvenio.printer.PrinterFactory
@@ -61,5 +62,9 @@ class TestPrinter(private val networkGetter: NetworkGetter) : Printer {
     }
 
     override fun close() {
+    }
+
+    override fun getTopLeftCoords(): Point {
+        return Point(0, 0)
     }
 }

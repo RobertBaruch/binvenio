@@ -14,6 +14,7 @@
 
 package org.babbageboole.binvenio.printer
 
+import android.graphics.Point
 import java.io.Closeable
 import java.net.InetSocketAddress
 
@@ -22,6 +23,7 @@ interface Printer : Closeable {
     fun canConnect(): Boolean?
     fun print(data: String): Boolean
     fun isDHCPEnabled(): Boolean?
+    fun getTopLeftCoords(): Point
 }
 
 interface PrinterFactory {

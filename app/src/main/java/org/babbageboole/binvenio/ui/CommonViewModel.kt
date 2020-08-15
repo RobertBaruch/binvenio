@@ -32,7 +32,6 @@ import org.babbageboole.binvenio.database.ResDatabase
 import org.babbageboole.binvenio.printer.Printer
 import org.babbageboole.binvenio.printer.PrinterFactory
 import timber.log.Timber
-import java.lang.StringBuilder
 import java.net.InetSocketAddress
 import java.security.SecureRandom
 
@@ -40,7 +39,8 @@ abstract class CommonViewModel(
     application: Application
 ) : AndroidViewModel(application) {
     companion object {
-        const val printables = "`1234567890-=~!@#$%^&*()_+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}|;:'\",<.>/?`\\"
+        const val printables =
+            "`1234567890-=~!@#$%^&*()_+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}|;:'\",<.>/?`\\"
     }
 
     protected var database = ResDatabase.getInstance(application).resDatabaseDao
@@ -123,7 +123,10 @@ abstract class CommonViewModel(
 
     protected fun generateRandomQR(): String {
         val rand = SecureRandom()
-        return IntRange(0, 9).joinToString(separator = "") { "${printables[rand.nextInt(printables.length)]}" }
+        return IntRange(
+            0,
+            9
+        ).joinToString(separator = "") { "${printables[rand.nextInt(printables.length)]}" }
     }
 
     /**
@@ -217,34 +220,12 @@ abstract class CommonViewModel(
             if (index < lines.size) lines[index] = chunk
         }
 
-        var qrCmd = "^BQN,2,3^FDQA,$qr^FS"
-
-        val str = """
-            ^XA
-            ^FO90,20
-            $qrCmd
-            ^FO165,25
-            ^ADN,18,10
-            ^FD${lines[0]}^FS
-            ^FO165,45
-            ^ADN,18,10
-            ^FD${lines[1]}^FS
-            ^FO165,65
-            ^ADN,18,10
-            ^FD${lines[2]}^FS
-            ^FO165,85
-            ^ADN,18,10
-            ^FD${lines[3]}^FS
-            ^FN0^FDprinted^FS
-            ^FH_^HV0,8,OK:,_0D_0A,L^FS
-            ^XZ
-        """.trimIndent()
-
         uiScope.launch {
-            if (print(addr, str)) {
+            if (printSticker(addr, qr, lines)) {
                 _printComplete.value = true
             } else {
                 _showError.value = "Print failed."
+                setPrinterAddr(null)
             }
         }
         return true
@@ -316,10 +297,34 @@ abstract class CommonViewModel(
         }
     }
 
-    private suspend fun print(addr: InetSocketAddress, str: String): Boolean {
+    private suspend fun printSticker(addr: InetSocketAddress, qr: String, lines: List<String>): Boolean {
         return withContext(Dispatchers.IO) {
             val printerFactory = getPrinterFactory(getApplication<Application>().applicationContext)
             printerFactory.get().open(addr)?.use { printer ->
+                val qrCmd = "^BQN,2,3^FDQA,$qr^FS"
+                var zero = printer.getTopLeftCoords()
+
+                val str = """
+                    ^XA
+                    ^FO${zero.x},${zero.y}
+                    $qrCmd
+                    ^FO${zero.x+75},${zero.y+5}
+                    ^ADN,18,10
+                    ^FD${lines[0]}^FS
+                    ^FO${zero.x+75},${zero.y+25}
+                    ^ADN,18,10
+                    ^FD${lines[1]}^FS
+                    ^FO${zero.x+75},${zero.y+45}
+                    ^ADN,18,10
+                    ^FD${lines[2]}^FS
+                    ^FO${zero.x+75},${zero.y+65}
+                    ^ADN,18,10
+                    ^FD${lines[3]}^FS
+                    ^FN0^FD^FS
+                    ^FH_^HV0,8,OK:,_0D_0A,L^FS
+                    ^XZ
+                """.trimIndent()
+
                 return@withContext printer.print(str)
             }
             false
