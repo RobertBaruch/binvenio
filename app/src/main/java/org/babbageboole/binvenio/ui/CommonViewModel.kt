@@ -40,7 +40,7 @@ abstract class CommonViewModel(
 ) : AndroidViewModel(application) {
     companion object {
         const val printables =
-            "`1234567890-=~!@#$%^&*()_+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}|;:'\",<.>/?`\\"
+            "`1234567890-=!@#$%&*()_+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}|;:'\",<.>/?`\\"
     }
 
     protected var database = ResDatabase.getInstance(application).resDatabaseDao
@@ -324,7 +324,7 @@ abstract class CommonViewModel(
                     ^FH_^HV0,8,OK:,_0D_0A,L^FS
                     ^XZ
                 """.trimIndent()
-
+                Timber.i("To printer: $str")
                 return@withContext printer.print(str)
             }
             false
